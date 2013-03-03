@@ -54,12 +54,12 @@ int inline min3 (int a, int b, int c)
 
 int EditDistance(char* s1, int m, char* s2, int n) {
     int table[m+1][n+1];
-    for ( i = 0; i <= m; ++i)
+    for ( int i = 0; i <= m; ++i)
         table[i][0] = i;
-    for ( j = 0; j <= n; ++j)
+    for ( int j = 0; j <= n; ++j)
         table[0][j] = j;
-    for ( i = 1; i <= m; ++i) {
-        for ( j = 1; j <= n; ++j) {
+    for ( int i = 1; i <= m; ++i) {
+        for ( int j = 1; j <= n; ++j) {
             if (s1[i-1] == s2[j-1]) table[i][j]  = table[i-1][j-1];
             else table[i][j] = 1 + min3(table[i][j-1],table[i-1][j],table[i-1][j-1]);
         }

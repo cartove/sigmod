@@ -28,13 +28,13 @@
 	
 
 # Build targets (your implementation targets should go in IMPL_O)
-TEST_O=test_driver/test.o 
+TEST_O=test_driver/test.o
 IMPL_O=ref_impl/core.o
 
 # Compiler flags
 CC  = gcc
 CXX = g++
-CFLAGS=-O3 -fPIC -Wall -g -I. -I./include
+CFLAGS=-O3 -fPIC -Wall -g -std=gnu++11 -I. -I./include
 CXXFLAGS=$(CFLAGS)
 LDFLAGS=-lpthread
 
