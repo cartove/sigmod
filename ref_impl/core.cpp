@@ -34,33 +34,34 @@
 using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-// Computes edit distance between a null-terminated string "a" with length "na"
-//  and a null-terminated string "b" with length "nb"
-int inline least (int a, int b, int c)
+// EditDistance ()computes the edit distance between 2 strings s1 and s2
+// each is follwed by it's size m , n
+// both are C style strings and the algorithm is DP
+// min3() is an optimized instructions to get min of three intgers
+// min3() have a significant effect it can be optimized further
+int inline min3 (int a, int b, int c)
 {
-  __asm__ (
-           "cmp     %0, %1\n\t"
-           "cmovle  %1, %0\n\t"
-           "cmp     %0, %2\n\t"
-           "cmovle  %2, %0\n\t"
-          : "+r"(a) :
-            "%r"(b), "r"(c)
-          );
-  return a;
+    __asm__ (
+    "cmp     %0, %1\n\t"
+    "cmovle  %1, %0\n\t"
+    "cmp     %0, %2\n\t"
+    "cmovle  %2, %0\n\t"
+    : "+r"(a) :
+        "%r"(b), "r"(c)
+      );
+    return a;
 }
-
 
 int EditDistance(char* s1, int m, char* s2, int n) {
     int table[m+1][n+1];
-    for ( int i = 0; i <= m; ++i)
+    for ( i = 0; i <= m; ++i)
         table[i][0] = i;
-    for ( int j = 0; j <= n; ++j)
+    for ( j = 0; j <= n; ++j)
         table[0][j] = j;
-
-    for ( int i = 1; i <= m; ++i) {
-        for ( int j = 1; j <= n; ++j) {
-            if (s1[i-1] == s2[j-1]) table[i][j] = table[i-1][j-1];
-            else table[i][j] = 1 + least(table[i][j-1],table[i-1][j],table[i-1][j-1]);
+    for ( i = 1; i <= m; ++i) {
+        for ( j = 1; j <= n; ++j) {
+            if (s1[i-1] == s2[j-1]) table[i][j]  = table[i-1][j-1];
+            else table[i][j] = 1 + min3(table[i][j-1],table[i-1][j],table[i-1][j-1]);
         }
     }
     return table[m][n];
