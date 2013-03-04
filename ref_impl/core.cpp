@@ -1,29 +1,29 @@
 /*
- * core.cpp version 1.0
- * Copyright (c) 2013 KAUST - InfoCloud Group (All Rights Reserved)
- * Author: Amin Allam
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- */
+* core.cpp version 1.0
+* Copyright (c) 2013 KAUST - InfoCloud Group (All Rights Reserved)
+* Author: Amin Allam
+*
+* Permission is hereby granted, free of charge, to any person
+* obtaining a copy of this software and associated documentation
+* files (the "Software"), to deal in the Software without
+* restriction, including without limitation the rights to use,
+* copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the
+* Software is furnished to do so, subject to the following
+* conditions:
+*
+* The above copyright notice and this permission notice shall be
+* included in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+* OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+* NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+* HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+* WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+* OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 #include "../include/core.h"
 #include <cstring>
@@ -31,57 +31,82 @@
 #include <cstdio>
 #include <vector>
 #include <pthread.h>
+#include <stdlib.h>
 using namespace std;
-
 ///////////////////////////////////////////////////////////////////////////////////////////////
-// EditDistance ()computes the edit distance between 2 strings s1 and s2
-// each is follwed by it's size m , n
-// both are C style strings and the algorithm is DP
-// min3() is an optimized instructions to get min of three intgers
-// min3() have a significant effect it can be optimized further
-long int inline min3 (long int a, long int b, long int c)
-{
-    __asm__ (
-    "cmp     %0, %1\n\t"
-    "cmovle  %1, %0\n\t"
-    "cmp     %0, %2\n\t"
-    "cmovle  %2, %0\n\t"
-    : "+r"(a) :
-        "%r"(b), "r"(c)
-      );
-    return a;
-}
 
-long int EditDistance(char* s1, long int m, char* s2, long int n) {
-    long int table[257][260];
-    for (long int i = 0; i <= m; ++i)
-        table[i][0] = i;
-    for ( long int i = 0; i <= n; ++i)
-        table[0][i] = i;
-    for ( long int  i = 1; i <= m; ++i) {
-        for ( long int j = 1; j <= n; ++j) {
-            if (s1[i-1] == s2[j-1]) table[i][j]  = table[i-1][j-1];
-            else table[i][j] = 1 + min3(table[i][j-1],table[i-1][j],table[i-1][j-1]);
+// Computes edit distance between a null-terminated string "a" with length "na"
+//  and a null-terminated string "b" with length "nb"
+int EditDistance(char* a, int na, char* b, int nb)
+{
+    int oo=0x7FFFFFFF;
+
+    static int T[2][MAX_WORD_LENGTH+1];
+
+    int ia, ib;
+
+    int cur=0;
+    ia=0;
+
+    for(ib=0;ib<=nb;ib++)
+        T[cur][ib]=ib;
+
+    cur=1-cur;
+
+    for(ia=1;ia<=na;ia++)
+    {
+        for(ib=0;ib<=nb;ib++)
+            T[cur][ib]=oo;
+
+        int ib_st=0;
+        int ib_en=nb;
+
+        if(ib_st==0)
+        {
+            ib=0;
+            T[cur][ib]=ia;
+            ib_st++;
         }
+
+        for(ib=ib_st;ib<=ib_en;ib++)
+        {
+            int ret=oo;
+
+            int d1=T[1-cur][ib]+1;
+            int d2=T[cur][ib-1]+1;
+            int d3=T[1-cur][ib-1]; if(a[ia-1]!=b[ib-1]) d3++;
+
+            if(d1<ret) ret=d1;
+            if(d2<ret) ret=d2;
+            if(d3<ret) ret=d3;
+
+            T[cur][ib]=ret;
+        }
+
+        cur=1-cur;
     }
-    return table[m][n];
+
+    int ret=T[1-cur][nb];
+
+    return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 // Computes Hamming distance between a null-terminated string "a" with length "na"
-//  and a null-terminated string "b" with length "nb" 
-unsigned int HammingDistance(char* a, long int na, char* b,long int nb) {
-    if(na!=nb) return 0x7FFFFFFF;
-    unsigned long int num_mismatches=0;
-    for(long int j=0;j<na;j++) if(a[j]!=b[j]) num_mismatches++;
+//  and a null-terminated string "b" with length "nb"
+unsigned int HammingDistance(char* a, int na, char* b, int nb)
+{
+    int j, oo=0x7FFFFFFF;
+    if(na!=nb) return oo;
+
+    unsigned int num_mismatches=0;
+    for(j=0;j<na;j++) if(a[j]!=b[j]) num_mismatches++;
 
     return num_mismatches;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-
-// Keeps all information related to an active query
 struct Query {
     QueryID query_id;
     char str[MAX_QUERY_LENGTH];
@@ -145,9 +170,75 @@ ErrorCode EndQuery(QueryID query_id)
     }
     return EC_SUCCESS;
 }
-
+struct query_thread_param
+{
+    Query* quer;
+    bool matching_query;
+    char cur_doc_str[MAX_DOC_LENGTH];
+};
 ///////////////////////////////////////////////////////////////////////////////////////////////
+void* search_for_query(void* input)
+{
+    query_thread_param input2= *((query_thread_param*) input);
+    Query* quer=input2.quer;
+    char* cur_doc_str=input2.cur_doc_str;
+    bool matching_query=input2.matching_query;
+    int iq=0;
+    while(quer->str[iq] && matching_query)
+    {
 
+        while(quer->str[iq]==' ') iq++;
+        if(!quer->str[iq]) break;
+        char* qword=&quer->str[iq];
+        int lq=iq;
+        while(quer->str[iq] && quer->str[iq]!=' ') iq++;
+        char qt=quer->str[iq];
+        quer->str[iq]=0;
+        lq=iq-lq;
+
+        bool matching_word=false;
+
+        int id=0;
+        while(cur_doc_str[id] && !matching_word)
+        {
+            while(cur_doc_str[id]==' ') id++;
+            if(!cur_doc_str[id]) break;
+            char* dword=&cur_doc_str[id];
+
+            int ld=id;
+            while(cur_doc_str[id] && cur_doc_str[id]!=' ') id++;
+            char dt=cur_doc_str[id];
+            cur_doc_str[id]=0;
+
+            ld=id-ld;
+
+            if(quer->match_type==MT_EXACT_MATCH)
+            {
+                if(strcmp(qword, dword)==0) matching_word=true;
+            }
+            else if(quer->match_type==MT_HAMMING_DIST)
+            {
+                unsigned int num_mismatches=HammingDistance(qword, lq, dword, ld);
+                if(num_mismatches<=quer->match_dist) matching_word=true;
+            }
+            else if(quer->match_type==MT_EDIT_DIST)
+            {
+                unsigned int edit_dist=EditDistance(qword, lq, dword, ld);
+                if(edit_dist<=quer->match_dist) matching_word=true;
+            }
+
+            cur_doc_str[id]=dt;
+        }
+
+        quer->str[iq]=qt;
+
+        if(!matching_word)
+        {
+            // This query has a word that does not match any word in the document
+            matching_query=false;
+        }
+    }
+}
 ErrorCode MatchDocument(DocID doc_id, const char* doc_str)
 {
     char cur_doc_str[MAX_DOC_LENGTH];
@@ -155,73 +246,21 @@ ErrorCode MatchDocument(DocID doc_id, const char* doc_str)
 
     unsigned int i, n=queries.size();
     vector<unsigned int> query_ids;
-
+    pthread_t query_execute;//thread for each query in the current document
     // Iterate on all active queries to compare them with this new document
     for(i=0;i<n;i++)
     {
         bool matching_query=true;
-        Query* quer=&queries[i];
-
-        int iq=0;
-        while(quer->str[iq] && matching_query)
-        {
-            while(quer->str[iq]==' ') iq++;
-            if(!quer->str[iq]) break;
-            char* qword=&quer->str[iq];
-
-            int lq=iq;
-            while(quer->str[iq] && quer->str[iq]!=' ') iq++;
-            char qt=quer->str[iq];
-            quer->str[iq]=0;
-            lq=iq-lq;
-
-            bool matching_word=false;
-
-            int id=0;
-            while(cur_doc_str[id] && !matching_word)
-            {
-                while(cur_doc_str[id]==' ') id++;
-                if(!cur_doc_str[id]) break;
-                char* dword=&cur_doc_str[id];
-
-                int ld=id;
-                while(cur_doc_str[id] && cur_doc_str[id]!=' ') id++;
-                char dt=cur_doc_str[id];
-                cur_doc_str[id]=0;
-
-                ld=id-ld;
-
-                if(quer->match_type==MT_EXACT_MATCH)
-                {
-                    if(strcmp(qword, dword)==0) matching_word=true;
-                }
-                else if(quer->match_type==MT_HAMMING_DIST)
-                {
-                    unsigned int num_mismatches=HammingDistance(qword, lq, dword, ld);
-                    if(num_mismatches<=quer->match_dist) matching_word=true;
-                }
-                else if(quer->match_type==MT_EDIT_DIST)
-                {
-                    unsigned int edit_dist=EditDistance(qword, lq, dword, ld);
-                    if(edit_dist<=quer->match_dist) matching_word=true;
-                }
-
-                cur_doc_str[id]=dt;
-            }
-
-            quer->str[iq]=qt;
-
-            if(!matching_word)
-            {
-                // This query has a word that does not match any word in the document
-                matching_query=false;
-            }
-        }
-
+        query_thread_param *thread_param;
+        thread_param->quer=&queries[i];
+        thread_param->matching_query=matching_query;
+        strcpy(thread_param->cur_doc_str, cur_doc_str);
+        pthread_create(&query_execute,NULL, search_for_query,(void *) &thread_param);
+        pthread_join(query_execute,NULL);
         if(matching_query)
         {
             // This query matches the document
-            query_ids.push_back(quer->query_id);
+            query_ids.push_back(thread_param->quer->query_id);
         }
     }
 
