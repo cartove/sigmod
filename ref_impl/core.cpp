@@ -39,7 +39,7 @@ using namespace std;
 // both are C style strings and the algorithm is DP
 // min3() is an optimized instructions to get min of three intgers
 // min3() have a significant effect it can be optimized further
-int inline min3 (int a, int b, int c)
+long int inline min3 (long int a, long int b, long int c)
 {
     __asm__ (
     "cmp     %0, %1\n\t"
@@ -52,14 +52,14 @@ int inline min3 (int a, int b, int c)
     return a;
 }
 
-int EditDistance(char* s1, int m, char* s2, int n) {
-    int table[m+1][n+1];
-    for ( int i = 0; i <= m; ++i)
+long int EditDistance(char* s1, long int m, char* s2, long int n) {
+    long int table[257][260];
+    for (long int i = 0; i <= m; ++i)
         table[i][0] = i;
-    for ( int j = 0; j <= n; ++j)
-        table[0][j] = j;
-    for ( int i = 1; i <= m; ++i) {
-        for ( int j = 1; j <= n; ++j) {
+    for ( long int i = 0; i <= n; ++i)
+        table[0][i] = i;
+    for ( long int  i = 1; i <= m; ++i) {
+        for ( long int j = 1; j <= n; ++j) {
             if (s1[i-1] == s2[j-1]) table[i][j]  = table[i-1][j-1];
             else table[i][j] = 1 + min3(table[i][j-1],table[i-1][j],table[i-1][j-1]);
         }
@@ -71,13 +71,10 @@ int EditDistance(char* s1, int m, char* s2, int n) {
 
 // Computes Hamming distance between a null-terminated string "a" with length "na"
 //  and a null-terminated string "b" with length "nb" 
-unsigned int HammingDistance(char* a, int na, char* b, int nb)
-{
-    int j, oo=0x7FFFFFFF;
-    if(na!=nb) return oo;
-
-    unsigned int num_mismatches=0;
-    for(j=0;j<na;j++) if(a[j]!=b[j]) num_mismatches++;
+unsigned int HammingDistance(char* a, long int na, char* b,long int nb) {
+    if(na!=nb) return 0x7FFFFFFF;
+    unsigned long int num_mismatches=0;
+    for(long int j=0;j<na;j++) if(a[j]!=b[j]) num_mismatches++;
 
     return num_mismatches;
 }
