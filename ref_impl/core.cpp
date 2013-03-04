@@ -244,15 +244,14 @@ ErrorCode MatchDocument(DocID doc_id, const char* doc_str)
     char cur_doc_str[MAX_DOC_LENGTH];
     strcpy(cur_doc_str, doc_str);
 
-    unsigned int i, n=queries.size();
     vector<unsigned int> query_ids;
     pthread_t query_execute;//thread for each query in the current document
     // Iterate on all active queries to compare them with this new document
-    for(i=0;i<n;i++)
+    for(vector <Query>::iterator it = queries.begin();it!=queries.end();++it)
     {
         bool matching_query=true;
-        query_thread_param *thread_param;
-        thread_param->quer=&queries[i];
+        query_thread_param *thread_param = new query_thread_param();
+        thread_param->quer= &(*it);
         thread_param->matching_query=matching_query;
         strcpy(thread_param->cur_doc_str, cur_doc_str);
         pthread_create(&query_execute,NULL, search_for_query,(void *) &thread_param);
@@ -269,7 +268,7 @@ ErrorCode MatchDocument(DocID doc_id, const char* doc_str)
     doc.num_res=query_ids.size();
     doc.query_ids=0;
     if(doc.num_res) doc.query_ids=(unsigned int*)malloc(doc.num_res*sizeof(unsigned int));
-    for(i=0;i<doc.num_res;i++) doc.query_ids[i]=query_ids[i];
+    for(unsigned i=0;i<doc.num_res;i++) doc.query_ids[i]=query_ids[i];
     // Add this result to the set of undelivered results
     docs.push_back(doc);
 
