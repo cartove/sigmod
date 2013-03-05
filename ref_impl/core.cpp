@@ -170,30 +170,35 @@ ErrorCode EndQuery(QueryID query_id)
     }
     return EC_SUCCESS;
 }
+
 struct query_thread_param
 {
-    Query* quer;
+    char str[MAX_QUERY_LENGTH];
     bool matching_query;
     char cur_doc_str[MAX_DOC_LENGTH];
+    MatchType match_type;
+    unsigned int match_dist;
 };
 ///////////////////////////////////////////////////////////////////////////////////////////////
 void* search_for_query(void* input)
 {
     query_thread_param input2= *((query_thread_param*) input);
-    Query* quer=input2.quer;
+    char* str=input2.str;
     char* cur_doc_str=input2.cur_doc_str;
     bool matching_query=input2.matching_query;
     int iq=0;
-    while(quer->str[iq] && matching_query)
+    MatchType match_type=input2.match_type;
+      unsigned int match_dist=input2.match_dist;
+    while(str[iq] && matching_query)
     {
 
-        while(quer->str[iq]==' ') iq++;
-        if(!quer->str[iq]) break;
-        char* qword=&quer->str[iq];
+        while(str[iq]==' ') iq++;
+        if(!str[iq]) break;
+        char* qword=&str[iq];
         int lq=iq;
-        while(quer->str[iq] && quer->str[iq]!=' ') iq++;
-        char qt=quer->str[iq];
-        quer->str[iq]=0;
+        while(str[iq] && str[iq]!=' ') iq++;
+        char qt=str[iq];
+        str[iq]=0;
         lq=iq-lq;
 
         bool matching_word=false;
@@ -212,25 +217,25 @@ void* search_for_query(void* input)
 
             ld=id-ld;
 
-            if(quer->match_type==MT_EXACT_MATCH)
+            if(match_type==MT_EXACT_MATCH)
             {
                 if(strcmp(qword, dword)==0) matching_word=true;
             }
-            else if(quer->match_type==MT_HAMMING_DIST)
+            else if(match_type==MT_HAMMING_DIST)
             {
                 unsigned int num_mismatches=HammingDistance(qword, lq, dword, ld);
-                if(num_mismatches<=quer->match_dist) matching_word=true;
+                if(num_mismatches<=match_dist) matching_word=true;
             }
-            else if(quer->match_type==MT_EDIT_DIST)
+            else if(match_type==MT_EDIT_DIST)
             {
                 unsigned int edit_dist=EditDistance(qword, lq, dword, ld);
-                if(edit_dist<=quer->match_dist) matching_word=true;
+                if(edit_dist<=match_dist) matching_word=true;
             }
 
             cur_doc_str[id]=dt;
         }
 
-        quer->str[iq]=qt;
+        str[iq]=qt;
 
         if(!matching_word)
         {
@@ -245,21 +250,25 @@ ErrorCode MatchDocument(DocID doc_id, const char* doc_str)
     strcpy(cur_doc_str, doc_str);
 
     vector<unsigned int> query_ids;
-    pthread_t query_execute;//thread for each query in the current document
     // Iterate on all active queries to compare them with this new document
     for(vector <Query>::iterator it = queries.begin();it!=queries.end();++it)
     {
+
+        pthread_t query_execute;//thread for each query in the current document
         bool matching_query=true;
         query_thread_param *thread_param = new query_thread_param();
-        thread_param->quer= &(*it);
+        Query* quer=&(*it);
+      strcpy(thread_param->str,quer->str);
         thread_param->matching_query=matching_query;
         strcpy(thread_param->cur_doc_str, cur_doc_str);
+        thread_param->match_dist=quer->match_dist;
+        thread_param->match_type=quer->match_type;
         pthread_create(&query_execute,NULL, search_for_query,(void *) &thread_param);
         pthread_join(query_execute,NULL);
-        if(matching_query)
+        if(thread_param->matching_query)
         {
             // This query matches the document
-            query_ids.push_back(thread_param->quer->query_id);
+            query_ids.push_back(quer->query_id);
         }
     }
 
