@@ -5,3 +5,5 @@ test_driver/test.cpp
 libcore.so
 README
 testdriver
+include/thpool.h
+ref_impl/thpool.c

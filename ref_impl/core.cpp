@@ -26,11 +26,11 @@
 */
 
 #include "../include/core.h"
+#include "thpool.c"
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
-#include <pthread.h>
 #include <stdlib.h>
 using namespace std;
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -246,6 +246,8 @@ void* search_for_query(void* input)
 }
 ErrorCode MatchDocument(DocID doc_id, const char* doc_str)
 {
+    thpool_t* threadpool;
+    threadpool=thpool_init(1);
     char cur_doc_str[MAX_DOC_LENGTH];
     strcpy(cur_doc_str, doc_str);
 
@@ -253,25 +255,22 @@ ErrorCode MatchDocument(DocID doc_id, const char* doc_str)
     // Iterate on all active queries to compare them with this new document
     for(vector <Query>::iterator it = queries.begin();it!=queries.end();++it)
     {
-
-        pthread_t query_execute;//thread for each query in the current document
         bool matching_query=true;
         query_thread_param *thread_param = new query_thread_param();
         Query* quer=&(*it);
-      strcpy(thread_param->str,quer->str);
+        strcpy(thread_param->str,quer->str);
         thread_param->matching_query=matching_query;
         strcpy(thread_param->cur_doc_str, cur_doc_str);
         thread_param->match_dist=quer->match_dist;
         thread_param->match_type=quer->match_type;
-        pthread_create(&query_execute,NULL, search_for_query,(void *) &thread_param);
-        pthread_join(query_execute,NULL);
+        thpool_add_work(threadpool,search_for_query,(void *) &thread_param);
         if(thread_param->matching_query)
         {
             // This query matches the document
             query_ids.push_back(quer->query_id);
         }
+        delete thread_param; // bugfix for the memory leak but it's not correct !
     }
-
     Document doc;
     doc.doc_id=doc_id;
     doc.num_res=query_ids.size();
@@ -280,7 +279,7 @@ ErrorCode MatchDocument(DocID doc_id, const char* doc_str)
     for(unsigned i=0;i<doc.num_res;i++) doc.query_ids[i]=query_ids[i];
     // Add this result to the set of undelivered results
     docs.push_back(doc);
-
+    thpool_destroy(threadpool);
     return EC_SUCCESS;
 }
 
