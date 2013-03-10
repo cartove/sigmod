@@ -185,11 +185,11 @@ void* search_for_query(void* input)
     query_thread_param input2= *((query_thread_param*) input);
     char* str=input2.str;
     char* cur_doc_str=input2.cur_doc_str;
-    bool matching_query=input2.matching_query;
+    input2.matching_query;
     int iq=0;
     MatchType match_type=input2.match_type;
       unsigned int match_dist=input2.match_dist;
-    while(str[iq] && matching_query)
+    while(str[iq] && input2.matching_query)
     {
 
         while(str[iq]==' ') iq++;
@@ -236,40 +236,42 @@ void* search_for_query(void* input)
         }
 
         str[iq]=qt;
-
         if(!matching_word)
         {
             // This query has a word that does not match any word in the document
-            matching_query=false;
+            input2.matching_query=false;
         }
     }
 }
 ErrorCode MatchDocument(DocID doc_id, const char* doc_str)
 {
     thpool_t* threadpool;
-    threadpool=thpool_init(1);
+    threadpool=thpool_init(12);
     char cur_doc_str[MAX_DOC_LENGTH];
     strcpy(cur_doc_str, doc_str);
 
     vector<unsigned int> query_ids;
+    query_thread_param *thread_param;
     // Iterate on all active queries to compare them with this new document
     for(vector <Query>::iterator it = queries.begin();it!=queries.end();++it)
     {
-        bool matching_query=true;
-        query_thread_param *thread_param = new query_thread_param();
+        thread_param = new query_thread_param();
         Query* quer=&(*it);
         strcpy(thread_param->str,quer->str);
-        thread_param->matching_query=matching_query;
+        thread_param->matching_query=true;
         strcpy(thread_param->cur_doc_str, cur_doc_str);
         thread_param->match_dist=quer->match_dist;
         thread_param->match_type=quer->match_type;
         thpool_add_work(threadpool,search_for_query,(void *) &thread_param);
+        ///// RACING CONDITION ERROR!!
         if(thread_param->matching_query)
         {
             // This query matches the document
             query_ids.push_back(quer->query_id);
         }
         delete thread_param; // bugfix for the memory leak but it's not correct !
+        // the thread param is needed for correct answers but outside it's scoop it's useless
+        // i'll try to fix it soon ,, araby should know it too .s
     }
     Document doc;
     doc.doc_id=doc_id;

@@ -30,7 +30,8 @@
 #include <semaphore.h>
 #include <errno.h>
 
-#include "../include/thpool.h"      /* here you can also find the interface to each function */
+#include "../include/thpool.h"
+      /* here you can also find the interface to each function */
 
 
 static int thpool_keepalive=1;
@@ -79,6 +80,7 @@ thpool_t* thpool_init(int threadsN){
 
     return tp_p;
 }
+
 
 /* What each individual thread is doing
  * */
