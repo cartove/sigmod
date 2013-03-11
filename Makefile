@@ -34,9 +34,9 @@ IMPL_O=ref_impl/core.o
 # Compiler flags
 CC  = gcc
 CXX = g++
-CFLAGS=-O3 -fPIC -Wall -g -fpermissive -lpthread -O2 -march=corei7 -msse2 -mavx -I. -I./include
+CFLAGS=-O3 -fPIC -lpthread -Wall -g -fpermissive -I. -I./include
 CXXFLAGS=$(CFLAGS)
-LDFLAGS=-lpthread
+LDFLAGS=
 
 # The programs that will be built
 PROGRAMS=testdriver
